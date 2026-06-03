@@ -115,24 +115,22 @@ export async function lookupShopPiecesInDb(): Promise<Map<string, number>> {
 }
 
 async function lookupShopPiecesInDbUncached(): Promise<Map<string, number>> {
-  const pieceCodes = SHOP_MASTER_DEFS.map((def) => def.pieceCode);
+  const kanjiList = SHOP_MASTER_DEFS.map((def) => def.kanji);
   const { data, error } = await supabaseAdmin
     .schema('master')
     .from('m_piece')
     .select('piece_id, kanji, piece_code')
-    .in('piece_code', pieceCodes);
+    .in('kanji', kanjiList);
   if (error) throw error;
 
-  const kanjiByPieceCode = new Map(
-    SHOP_MASTER_DEFS.map((def) => [def.pieceCode, def.kanji] as const),
-  );
+  const allowedKanji = new Set(kanjiList);
   const map = new Map<string, number>();
   for (const row of data ?? []) {
-    const pieceCode = String((row as { piece_code?: unknown }).piece_code ?? '');
-    const kanji =
-      String((row as { kanji?: unknown }).kanji ?? '') || kanjiByPieceCode.get(pieceCode) || '';
+    const kanji = String((row as { kanji?: unknown }).kanji ?? '');
     const pieceId = toNumber((row as { piece_id?: unknown }).piece_id);
-    if (kanji && pieceId) map.set(kanji, pieceId);
+    if (allowedKanji.has(kanji as ShopItemKey) && pieceId) {
+      map.set(kanji, pieceId);
+    }
   }
   return map;
 }
