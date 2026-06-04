@@ -339,25 +339,81 @@ function cloneStageBattleSetupMasterRows(
   };
 }
 
+const STAGE39_ONI_KANJI = new Set(['鬼', '赤鬼', '青鬼', '黒鬼']);
+
 async function applyStage39OniVariants(placementRows: any[]): Promise<void> {
   const enemyOniRows = placementRows
     .filter((row) => {
       const piece = Array.isArray(row?.m_piece) ? row.m_piece[0] : row?.m_piece;
-      return row?.side === 'enemy' && piece?.kanji === '鬼';
+      const kanji = piece?.kanji;
+      const name = piece?.name;
+      return (
+        row?.side === 'enemy' &&
+        (STAGE39_ONI_KANJI.has(kanji) ||
+          name === '赤鬼' ||
+          name === '青鬼' ||
+          name === '黒鬼' ||
+          piece?.piece_code === 'redOni' ||
+          piece?.piece_code === 'blueOni' ||
+          piece?.piece_code === 'blackOni')
+      );
     })
     .sort((a, b) => a.col_no - b.col_no || a.row_no - b.row_no);
 
   if (enemyOniRows.length < 2) return;
 
+  const { data: oniMasterRows, error } = await supabaseAdmin
+    .schema('master')
+    .from('m_piece')
+    .select('piece_id,piece_code,kanji,name,skill_id,move_pattern_id')
+    .in('piece_code', ['redOni', 'blueOni', 'blackOni', 'piece_533b7fec5456']);
+
+  if (error) throw error;
+
+  const oniByCode = new Map((oniMasterRows ?? []).map((row) => [row.piece_code as string, row]));
+
+  const applyTemplate = (placementRow: any, templateCode: 'redOni' | 'blueOni' | 'blackOni') => {
+    const template =
+      templateCode === 'redOni'
+        ? (oniByCode.get('redOni') ?? oniByCode.get('piece_533b7fec5456'))
+        : oniByCode.get(templateCode);
+    const piece = Array.isArray(placementRow?.m_piece)
+      ? placementRow.m_piece[0]
+      : placementRow?.m_piece;
+    if (!piece) return;
+
+    if (template) {
+      placementRow.piece_id = template.piece_id;
+      piece.piece_code = template.piece_code;
+      piece.kanji = template.kanji;
+      piece.name = template.name;
+      piece.skill_id = template.skill_id;
+      piece.move_pattern_id = template.move_pattern_id;
+      return;
+    }
+
+    if (templateCode === 'blueOni') {
+      piece.piece_code = 'blueOni';
+      piece.kanji = '青鬼';
+      piece.name = '青鬼';
+    } else if (templateCode === 'blackOni') {
+      piece.piece_code = 'blackOni';
+      piece.kanji = '黒鬼';
+      piece.name = '黒鬼';
+    } else {
+      piece.piece_code = 'redOni';
+      piece.kanji = '赤鬼';
+      piece.name = '赤鬼';
+    }
+  };
+
   const left = enemyOniRows[0];
   const right = enemyOniRows[enemyOniRows.length - 1];
 
-  const leftPiece = Array.isArray(left?.m_piece) ? left.m_piece[0] : left?.m_piece;
-  const rightPiece = Array.isArray(right?.m_piece) ? right.m_piece[0] : right?.m_piece;
-  if (!leftPiece || !rightPiece) return;
-
-  leftPiece.piece_code = 'blueOni';
-  leftPiece.name = '青鬼';
-  rightPiece.piece_code = 'blackOni';
-  rightPiece.name = '黒鬼';
+  applyTemplate(left, 'blueOni');
+  applyTemplate(right, 'blackOni');
+  for (const row of enemyOniRows) {
+    if (row === left || row === right) continue;
+    applyTemplate(row, 'redOni');
+  }
 }
