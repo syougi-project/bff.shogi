@@ -867,43 +867,29 @@
     },
     {
       "id": 26,
-      "skillDesc": "周囲8マスにいる敵駒の移動範囲を縦横1マスに制限する。",
+      "skillDesc": "移動時、周囲8マスにいる敵駒の行動範囲を4ターン縦横1マスに制限する。",
       "structured": {
-        "skillType": "passive",
+        "skillType": "active_or_triggered",
         "targetRule": "enemy_piece",
-        "effectSummaryType": "composite",
+        "effectSummaryType": "modify_movement",
         "procChance": null,
-        "durationTurns": 1,
-        "triggerTiming": "passive",
+        "durationTurns": 4,
+        "triggerTiming": "on_move",
         "scriptHook": null,
         "parseStatus": "rule_only_v2",
         "params": {
           "source": "seed_master_piece.sql",
-          "sentenceCount": 2
+          "sentenceCount": 1
         },
         "effects": [
           {
             "order": 1,
-            "triggerTiming": "passive",
-            "effectType": "modify_movement",
-            "targetRule": "self",
-            "procChance": null,
-            "durationTurns": 1,
-            "radius": null,
-            "valueNum": null,
-            "valueText": "orthogonal_step_1",
-            "params": {
-              "sourceSentence": "orthogonal_step_1"
-            }
-          },
-          {
-            "order": 2,
-            "triggerTiming": "passive",
+            "triggerTiming": "on_move",
             "effectType": "modify_movement",
             "targetRule": "enemy_piece",
             "procChance": null,
-            "durationTurns": 1,
-            "radius": null,
+            "durationTurns": 4,
+            "radius": 1,
             "valueNum": null,
             "valueText": "restrict_orthogonal_step_1",
             "params": {

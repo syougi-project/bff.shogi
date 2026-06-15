@@ -10,7 +10,9 @@ describe('DELETE /api/v1/me/account', () => {
       deleteAuthUser: async () => {},
     });
 
-    const response = await handler(new Request('http://localhost/api/v1/me/account', { method: 'DELETE' }));
+    const response = await handler(
+      new Request('http://localhost/api/v1/me/account', { method: 'DELETE' }),
+    );
     const payload = await readJson(response);
 
     expect(response.status).toBe(401);
@@ -29,7 +31,9 @@ describe('DELETE /api/v1/me/account', () => {
       },
     });
 
-    const response = await handler(new Request('http://localhost/api/v1/me/account', { method: 'DELETE' }));
+    const response = await handler(
+      new Request('http://localhost/api/v1/me/account', { method: 'DELETE' }),
+    );
     const payload = await readJson(response);
 
     expect(response.status).toBe(200);

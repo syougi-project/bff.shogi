@@ -358,7 +358,7 @@ values
   ('skill_6d58f2d3dea6', 'Skill 6d58f2', '移動時増殖する。', NULL, true, now(), now()),
   ('skill_d87285e95090', 'Skill d87285', '30%の確率で敵駒を溺れさせ行動不能にする。', NULL, true, now(), now()),
   ('skill_9bc79b411b72', 'Skill 9bc79b', '相手の駒は取れないが味方の駒を取れる。', NULL, true, now(), now()),
-  ('skill_fe412b11a3a5', 'Skill fe412b', '縦横に1マス移動。敵の移動範囲を1ターン縦横1マスに制限する。', NULL, true, now(), now()),
+  ('skill_fe412b11a3a5', 'Skill fe412b', '移動時、周囲8マスにいる敵駒の行動範囲を4ターン縦横1マスに制限する。', NULL, true, now(), now()),
   ('skill_e483da3a2f11', 'Skill e483da', '通ったマスを2ターン毒マスにする。', NULL, true, now(), now()),
   ('skill_d87ccd3779f5', 'Skill d87ccd', '周囲の敵駒の行動範囲を上下1マスのみにする。', NULL, true, now(), now()),
   ('skill_acbc6f54e64a', 'Skill acbc6f', '正面の敵駒の動きをコピーする。', NULL, true, now(), now()),

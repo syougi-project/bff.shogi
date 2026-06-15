@@ -27,7 +27,7 @@
 | 23 | 苔(苔) | 移動時増殖する。 | active_or_triggered | board_cell | summon_piece | on_move |  |  | rule_only_v2 |
 | 24 | 魚(魚) | 30%の確率で敵駒を溺れさせ行動不能にする。 | passive | enemy_piece | apply_status | passive | 0.3 |  | rule_only_v2 |
 | 25 | 雲(雲) | 相手の駒は取れないが味方の駒を取れる。 | passive | unspecified | capture_constraint | passive |  |  | rule_only_v2 |
-| 26 | 虹(虹) | 周囲8マスにいる敵駒の移動範囲を縦横1マスに制限する。 | passive | enemy_piece | composite | passive |  | 1 | rule_only_v2 |
+| 26 | 虹(虹) | 移動時、周囲8マスにいる敵駒の行動範囲を4ターン縦横1マスに制限する。 | active_or_triggered | enemy_piece | modify_movement | on_move |  | 4 | rule_only_v2 |
 | 27 | 毒(毒虫) | 通ったマスを2ターン毒マスにする。 | passive | board_cell | board_hazard | passive |  | 2 | rule_only_v2 |
 | 28 | 沼(沼主) | 周囲の敵駒の行動範囲を上下1マスのみにする。 | passive | adjacent_area | modify_movement | passive |  |  | rule_only_v2 |
 | 29 | 映(映像人), 鏡(鏡) | 正面の敵駒の動きをコピーする。 | passive | front_enemy | copy_ability | passive |  |  | rule_only_v2 |

@@ -10,7 +10,7 @@
     },
     {
       "pieceChar": "虹",
-      "skillText": "周囲8マスにいる敵駒の移動範囲を縦横1マスに制限する。",
+      "skillText": "移動時、周囲8マスにいる敵駒の行動範囲を4ターン縦横1マスに制限する。",
       "sourceFile": "../../SHOGI_GAME/piece_info.html",
       "sourceFunction": "../../SHOGI_GAME/online_battle.html::triggerRainbowSkill"
     },
@@ -349,36 +349,23 @@
       "skillId": 26,
       "pieceChars": ["虹"],
       "source": {
-        "skillText": "周囲8マスにいる敵駒の移動範囲を縦横1マスに制限する。",
+        "skillText": "移動時、周囲8マスにいる敵駒の行動範囲を4ターン縦横1マスに制限する。",
         "sourceKind": "online_battle",
         "sourceFile": "../../SHOGI_GAME/online_battle.html",
         "sourceFunction": "triggerRainbowSkill"
       },
       "classification": {
-        "implementationKind": "composite",
-        "tags": ["continuous_rule", "enemy_debuff", "movement_limit"]
+        "implementationKind": "primitive",
+        "tags": ["move_trigger", "enemy_debuff", "movement_limit"]
       },
       "trigger": {
-        "group": "continuous",
-        "type": "continuous_rule"
+        "group": "event_move",
+        "type": "after_move"
       },
       "conditions": [],
       "effects": [
         {
           "order": 1,
-          "group": "piece_position",
-          "type": "modify_movement",
-          "target": {
-            "group": "self",
-            "selector": "self_piece"
-          },
-          "params": {
-            "movementRule": "orthogonal_step_only",
-            "distance": 1
-          }
-        },
-        {
-          "order": 2,
           "group": "piece_position",
           "type": "modify_movement",
           "target": {
@@ -388,13 +375,13 @@
           "params": {
             "movementRule": "orthogonal_step_only",
             "distance": 1,
-            "durationTurns": 1,
+            "durationTurns": 4,
             "radius": 1
           }
         }
       ],
       "scriptHook": null,
-      "notes": "自己移動ルール変更と周囲敵への一時制限を effects 配列で表す composite 例"
+      "notes": "移動時に着地マス周囲8マスの敵駒へ4ターン縦横1マス制限"
     },
     {
       "skillId": 9,
