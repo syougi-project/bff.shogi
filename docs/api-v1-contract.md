@@ -149,7 +149,7 @@
 - Body: `{ matchId: string, won: boolean, opponentRating?: number }`
 - Success `200`: `data = { rating, delta, alreadyApplied }`
 - 勝敗は Elo 式（K=32）で変動。レート差が大きいほどアップセット時の変動は大きく、格差どおりの勝敗は小さくなる（下限 0、整数）。同一 `matchId` は冪等。
-- レート対象は `king_capture` / `checkmate` / `resign` のみ。`disconnect` や `disconnect_timeout` など異常終了では変動しない。
+- レート対象は `king_capture` / `checkmate` / `resign` / `disconnect`（意図的切断）。`disconnect_timeout` や `aborted` など異常終了では変動しない。
 - Errors:
   - `401 UNAUTHORIZED`
   - `400 INVALID_INPUT`

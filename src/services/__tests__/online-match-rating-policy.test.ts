@@ -10,7 +10,7 @@ describe('online-match-rating-policy', () => {
     expect(isRatedOnlineMatchEndReason('king_capture')).toBe(true);
     expect(isRatedOnlineMatchEndReason('resign')).toBe(true);
     expect(isRatedOnlineMatchEndReason('checkmate')).toBe(true);
-    expect(isRatedOnlineMatchEndReason('disconnect')).toBe(false);
+    expect(isRatedOnlineMatchEndReason('disconnect')).toBe(true);
     expect(isRatedOnlineMatchEndReason('disconnect_timeout')).toBe(false);
     expect(isRatedOnlineMatchEndReason('unknown')).toBe(false);
   });
@@ -29,7 +29,7 @@ describe('online-match-rating-policy', () => {
         winnerUserId: 'user-1',
         reason: 'disconnect',
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldApplyPvpRatingForMatch({
         status: 'finished',
