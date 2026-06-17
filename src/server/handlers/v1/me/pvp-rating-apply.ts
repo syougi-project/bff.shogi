@@ -13,6 +13,7 @@ async function resolveUserId(req: Request): Promise<string | null> {
 type ApplyBody = {
   matchId?: string;
   won?: boolean;
+  opponentRating?: number;
 };
 
 export async function postMePvpRatingApply(req: Request) {
@@ -37,10 +38,15 @@ export async function postMePvpRatingApply(req: Request) {
   }
 
   try {
+    const opponentRating =
+      typeof body.opponentRating === 'number' && Number.isFinite(body.opponentRating)
+        ? body.opponentRating
+        : undefined;
     const result = await applyPvpRatingForUser({
       userId,
       matchId,
       won: body.won,
+      opponentRating,
     });
     return jsonOk({
       rating: result.rating,

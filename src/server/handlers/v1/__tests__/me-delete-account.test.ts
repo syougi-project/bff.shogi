@@ -7,7 +7,7 @@ describe('DELETE /api/v1/me/account', () => {
   it('returns 401 when auth is missing', async () => {
     const handler = createDeleteMeAccount({
       resolveUserId: async () => null,
-      deleteAuthUser: async () => {},
+      deletePlayerAccount: async () => {},
     });
 
     const response = await handler(
@@ -26,7 +26,7 @@ describe('DELETE /api/v1/me/account', () => {
     let deletedUserId: string | null = null;
     const handler = createDeleteMeAccount({
       resolveUserId: async () => 'user-1',
-      deleteAuthUser: async (userId) => {
+      deletePlayerAccount: async (userId) => {
         deletedUserId = userId;
       },
     });

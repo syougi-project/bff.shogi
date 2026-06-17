@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { applyPvpRatingForUser } from '@/services/pvp-rating';
+import { shouldApplyPvpRatingForMatch } from '@/services/online-match-rating-policy';
+import { applyPvpRatingForMatch } from '@/services/pvp-rating';
 
 export type OnlineMatchResultInput = {
   matchId: string;
@@ -45,19 +46,27 @@ export async function recordOnlineMatchResult(input: OnlineMatchResultInput) {
     throw insertError;
   }
 
-  const shouldRate = input.status === 'finished' && Boolean(input.winnerUserId);
+  const shouldRate = shouldApplyPvpRatingForMatch({
+    status: input.status,
+    winnerUserId: input.winnerUserId,
+    reason: input.reason,
+  });
   if (!shouldRate) return { alreadyRecorded: false, ratingResults: [] };
 
-  const players = [input.playerBlackUserId, input.playerWhiteUserId];
-  const ratingResults = await Promise.all(
-    players.map((userId) =>
-      applyPvpRatingForUser({
-        userId,
-        matchId,
-        won: userId === input.winnerUserId,
-      }).then((result) => ({ userId, ...result })),
-    ),
-  );
+  const ratingResults = await applyPvpRatingForMatch({
+    matchId,
+    winnerUserId: input.winnerUserId!,
+    playerBlackUserId: input.playerBlackUserId,
+    playerWhiteUserId: input.playerWhiteUserId,
+  });
 
-  return { alreadyRecorded: false, ratingResults };
+  return {
+    alreadyRecorded: false,
+    ratingResults: ratingResults.map((result) => ({
+      userId: result.userId,
+      rating: result.rating,
+      delta: result.delta,
+      alreadyApplied: result.alreadyApplied,
+    })),
+  };
 }

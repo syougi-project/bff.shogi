@@ -14,6 +14,7 @@ type ApplyBody = {
   userId?: string;
   matchId?: string;
   won?: boolean;
+  opponentRating?: number;
 };
 
 export async function postInternalPvpRatingApply(req: Request) {
@@ -41,7 +42,11 @@ export async function postInternalPvpRatingApply(req: Request) {
   }
 
   try {
-    const result = await applyPvpRatingForUser({ userId, matchId, won: body.won });
+    const opponentRating =
+      typeof body.opponentRating === 'number' && Number.isFinite(body.opponentRating)
+        ? body.opponentRating
+        : undefined;
+    const result = await applyPvpRatingForUser({ userId, matchId, won: body.won, opponentRating });
     return jsonOk({
       userId,
       rating: result.rating,

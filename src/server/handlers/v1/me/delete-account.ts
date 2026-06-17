@@ -1,6 +1,6 @@
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-import { deleteAuthUser } from '@/services/account';
+import { deletePlayerAccount } from '@/services/account';
 
 export function optionsMeDeleteAccount() {
   return optionsResponse();
@@ -8,7 +8,7 @@ export function optionsMeDeleteAccount() {
 
 type DeleteMeAccountDeps = {
   resolveUserId: (req: Request) => Promise<string | null>;
-  deleteAuthUser: typeof deleteAuthUser;
+  deletePlayerAccount: typeof deletePlayerAccount;
 };
 
 async function resolveUserId(req: Request): Promise<string | null> {
@@ -22,7 +22,7 @@ async function resolveUserId(req: Request): Promise<string | null> {
 }
 
 export function createDeleteMeAccount(
-  deps: DeleteMeAccountDeps = { resolveUserId, deleteAuthUser },
+  deps: DeleteMeAccountDeps = { resolveUserId, deletePlayerAccount },
 ) {
   return async function deleteMeAccount(req: Request) {
     const userId = await deps.resolveUserId(req);
@@ -31,7 +31,7 @@ export function createDeleteMeAccount(
     }
 
     try {
-      await deps.deleteAuthUser(userId);
+      await deps.deletePlayerAccount(userId);
       return jsonOk({ deleted: true });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to delete account';
