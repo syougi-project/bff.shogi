@@ -7,6 +7,10 @@ import {
   normalizePvpRating,
 } from '@/lib/elo-rating';
 import { shouldApplyPvpRatingForMatch } from '@/services/online-match-rating-policy';
+import {
+  recordOnlineMatchResult,
+  type OnlineMatchResultInput,
+} from '@/services/online-match-result';
 
 export const PVP_RATING_INITIAL = 0;
 export { ELO_K_FACTOR, calculateEloRatingDelta, normalizePvpRating };
@@ -16,6 +20,78 @@ export type PvpRatingApplyResult = {
   delta: number;
   alreadyApplied: boolean;
 };
+
+export async function ensureOnlineMatchRecordedForRating(
+  input: OnlineMatchResultInput,
+): Promise<void> {
+  const matchId = input.matchId.trim();
+  if (!matchId) throw new Error('matchId is required');
+
+  const { data, error } = await supabaseAdmin
+    .from('online_match_results')
+    .select('match_id')
+    .eq('match_id', matchId)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (data) return;
+
+  await recordOnlineMatchResult(input);
+}
+
+async function applyPvpRatingForUserFallback(input: {
+  userId: string;
+  matchId: string;
+  won: boolean;
+  opponentRating?: number;
+}): Promise<PvpRatingApplyResult> {
+  const profile = await getPublicPlayerProfile(input.userId);
+  if (!profile) {
+    throw new Error('Player not found');
+  }
+
+  const opponentRating =
+    input.opponentRating === undefined ? profile.rating : normalizePvpRating(input.opponentRating);
+  const preview = calculatePvpRatingApplyPreview({
+    playerRating: profile.rating,
+    opponentRating,
+    won: input.won,
+  });
+
+  const { error: updateError } = await supabaseAdmin
+    .from('players')
+    .update({ rating: preview.rating, updated_at: new Date().toISOString() })
+    .eq('id', input.userId);
+  if (updateError) throw updateError;
+
+  const { error: eventError } = await supabaseAdmin.from('player_pvp_rating_events').insert({
+    player_id: input.userId,
+    match_id: input.matchId,
+    won: input.won,
+    delta: preview.delta,
+    rating_after: preview.rating,
+  });
+  if (eventError && eventError.code !== '23505') {
+    throw eventError;
+  }
+
+  return {
+    rating: preview.rating,
+    delta: preview.delta,
+    alreadyApplied: eventError?.code === '23505',
+  };
+}
+
+function shouldUsePvpRatingRpcFallback(error: unknown): boolean {
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return (
+    message.includes('apply_pvp_rating_for_user') ||
+    message.includes('apply_pvp_rating_for_match') ||
+    message.includes('could not find the function') ||
+    message.includes('schema cache')
+  );
+}
 
 export type PvpRatingMatchApplyResult = {
   userId: string;
@@ -96,7 +172,12 @@ export async function applyPvpRatingForUser(input: {
     { userId: input.userId, matchId, won: input.won },
   );
 
-  if (error) throw error;
+  if (error) {
+    if (shouldUsePvpRatingRpcFallback(error)) {
+      return applyPvpRatingForUserFallback(input);
+    }
+    throw error;
+  }
 
   const row = (Array.isArray(data) ? data[0] : data) as {
     rating?: unknown;

@@ -1,6 +1,7 @@
 import { resolveBearerUserId } from '@/lib/auth';
 import { jsonError, jsonOk, optionsResponse } from '@/lib/http';
-import { applyPvpRatingForUser } from '@/services/pvp-rating';
+import { shouldApplyPvpRatingForMatch } from '@/services/online-match-rating-policy';
+import { applyPvpRatingForUser, ensureOnlineMatchRecordedForRating } from '@/services/pvp-rating';
 
 export function optionsMePvpRatingApply() {
   return optionsResponse();
@@ -14,6 +15,14 @@ type ApplyBody = {
   matchId?: string;
   won?: boolean;
   opponentRating?: number;
+  recordMatch?: {
+    playerBlackUserId?: string;
+    playerWhiteUserId?: string;
+    winnerUserId?: string;
+    reason?: string;
+    startedAt?: string;
+    finishedAt?: string;
+  };
 };
 
 export async function postMePvpRatingApply(req: Request) {
@@ -42,6 +51,49 @@ export async function postMePvpRatingApply(req: Request) {
       typeof body.opponentRating === 'number' && Number.isFinite(body.opponentRating)
         ? body.opponentRating
         : undefined;
+
+    const record = body.recordMatch;
+    if (record) {
+      const playerBlackUserId =
+        typeof record.playerBlackUserId === 'string' ? record.playerBlackUserId.trim() : '';
+      const playerWhiteUserId =
+        typeof record.playerWhiteUserId === 'string' ? record.playerWhiteUserId.trim() : '';
+      const winnerUserId =
+        typeof record.winnerUserId === 'string' ? record.winnerUserId.trim() : '';
+      const reason = typeof record.reason === 'string' ? record.reason.trim() : '';
+      const finishedAt =
+        typeof record.finishedAt === 'string' && record.finishedAt.trim()
+          ? record.finishedAt.trim()
+          : new Date().toISOString();
+      const startedAt =
+        typeof record.startedAt === 'string' && record.startedAt.trim()
+          ? record.startedAt.trim()
+          : finishedAt;
+
+      if (
+        playerBlackUserId &&
+        playerWhiteUserId &&
+        winnerUserId &&
+        reason &&
+        shouldApplyPvpRatingForMatch({
+          status: 'finished',
+          winnerUserId,
+          reason,
+        })
+      ) {
+        await ensureOnlineMatchRecordedForRating({
+          matchId,
+          playerBlackUserId,
+          playerWhiteUserId,
+          winnerUserId,
+          status: 'finished',
+          reason,
+          startedAt,
+          finishedAt,
+        });
+      }
+    }
+
     const result = await applyPvpRatingForUser({
       userId,
       matchId,
