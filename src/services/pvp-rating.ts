@@ -83,6 +83,8 @@ async function applyPvpRatingForUserFallback(input: {
 }
 
 function shouldUsePvpRatingRpcFallback(error: unknown): boolean {
+  if (process.env.NODE_ENV !== 'test') return false;
+
   const message =
     error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
   return (
@@ -138,6 +140,10 @@ export async function applyPvpRatingForMatch(input: {
   }));
 }
 
+/**
+ * applyPvpRatingForUser の fallback は本番環境では利用禁止。
+ * テスト用途以外は必ず RPC 経由で実行すること。
+ */
 export async function applyPvpRatingForUser(input: {
   userId: string;
   matchId: string;

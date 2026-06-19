@@ -7,14 +7,9 @@ import { createGetPvpRatingLeaderboard } from '../pvp-rating/leaderboard';
 import { readJson } from './test-utils';
 
 describe('POST /api/v1/me/pvp-rating/apply', () => {
-  it('returns 401 without auth', async () => {
-    const response = await postMePvpRatingApply(
-      new Request('http://localhost/api/v1/me/pvp-rating/apply', {
-        method: 'POST',
-        body: JSON.stringify({ matchId: 'match-1', won: true }),
-      }),
-    );
-    expect(response.status).toBe(401);
+  it('returns 410 because client-side rating apply is disabled', async () => {
+    const response = await postMePvpRatingApply();
+    expect(response.status).toBe(410);
   });
 });
 

@@ -261,7 +261,12 @@ async function loadStagePieceRewards(
   return pieceQuantities;
 }
 
-export async function grantStageClearRewards(
+/**
+ * grantStageClearRewards は公開APIから直接呼び出さないこと。
+ * 必要な場合は private helper として BFF 内部専用で利用すること。
+ */
+// @internal
+async function grantStageClearRewards(
   userId: string,
   stageNo: number,
 ): Promise<StageClearRewardResult> {

@@ -1,0 +1,4 @@
+-- 2026-06 セキュリティ強化: SECURITY DEFINER RPC 追加時の方針コメント
+--
+-- 今後追加する SECURITY DEFINER 関数は、public/anon/authenticated からの EXECUTE を必ず revoke し、
+-- service role のみ許可すること。

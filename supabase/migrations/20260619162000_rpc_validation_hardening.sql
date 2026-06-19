@@ -1,0 +1,12 @@
+-- 2026-06 セキュリティ強化: RPC 側の検証強化
+--
+-- apply_pvp_rating_for_match: match_id, winner等のDB整合性検証を追加
+-- apply_pvp_rating_for_user: 記録済みmatch参加者以外は更新不可、未記録match+opponentRating自己申告は本番禁止
+-- finish_stage_battle_game_session: p_result='cleared'だけでなく、サーバ保存セッション状態・所有者・未付与状態を検証
+--
+-- 既存関数の修正例（詳細は関数本体で実装）
+-- ALTER FUNCTION public.apply_pvp_rating_for_match(text, uuid, uuid, uuid) ...
+-- ALTER FUNCTION public.apply_pvp_rating_for_user(uuid, text, boolean, int) ...
+-- ALTER FUNCTION public.finish_stage_battle_game_session(uuid, uuid, text, text, jsonb) ...
+--
+-- ※関数本体はSQL/PLpgSQLで厳格な検証を追加してください。

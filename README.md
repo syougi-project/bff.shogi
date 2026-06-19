@@ -26,6 +26,47 @@ npm run dev
 
 ## Supabase マイグレーション（リモート DB 更新）
 
+### 【2026/06 セキュリティ強化対応 TODO】
+
+このリポジトリの Supabase/BFF セキュリティ強化のため、以下の対応を順次実施します。
+
+#### 1. SECURITY DEFINER RPC の EXECUTE 権限制限
+- 指定関数（apply_pvp_rating_for_match, apply_pvp_rating_for_user, finish_stage_battle_game_session, finish_stage_battle_session）は public/anon/authenticated からの EXECUTE を revoke し、service role のみ許可します。
+- 今後追加する SECURITY DEFINER 関数も同様に EXECUTE 権限を閉じること。
+
+#### 2. クライアント向け PvP レート適用 API の無効化
+- `/api/v1/me/pvp-rating/apply` は廃止または 404/410 を返すようにします。
+- レート更新は内部APIまたは信頼できる対戦サーバ由来の確定結果のみ許可します。
+- applyPvpRatingForUser の fallback も本番では削除または test-only に限定します。
+
+#### 3. ステージクリア旧 API の無効化
+- `/api/v1/stages/[stageNo]/clear` は廃止または 404/410 を返すようにします。
+- 報酬付与は `/api/v1/stage-battles/finish` のみ許可します。
+- 旧 grantStageClearRewards(userId, stageNo) は公開ハンドラから呼ばないようにします。
+
+#### 4. public schema の RLS 書き込み権限最小化
+- players: authenticated の UPDATE は表示名のみ許可、rating/pawn_currency/gold_currency は直接更新不可に。
+- player_owned_pieces: INSERT/DELETE policy を削除。
+- player_stage_clears: INSERT/UPDATE policy を削除。
+- player_decks/player_deck_placements: 配置piece_idが本人所有であることをwith checkで保証、またはBFF専用にwrite policy削除。
+
+#### 5. RPC 側の検証強化
+- apply_pvp_rating_for_match: match_id, winner等のDB整合性検証を追加。
+- apply_pvp_rating_for_user: 記録済みmatch参加者以外は更新不可、未記録match+opponentRating自己申告は本番禁止。
+- finish_stage_battle_game_session: p_result='cleared'だけでなく、サーバ保存セッション状態・所有者・未付与状態を検証。
+
+#### 6. Supabase exposed schema/Storage の確認
+- Exposed schemasがpublic, graphql_publicのみであること、画像以外のbucketはprivateであることを確認。
+
+#### 7. テスト追加・更新
+- 不正経路からの更新不可テスト、正規フローのテスト維持。
+
+---
+
+このTODOを完了後、不要なpublic/client routeが閉じられ、BFF正規フローの既存テストが通り、不正更新ケースを防ぐテストが追加されていることを確認します。
+
+---
+
 スキーマ・マスタデータの変更は `supabase/migrations/*.sql` に追加し、リモートへ反映します。
 
 ### 初回セットアップ（1 回だけ）
