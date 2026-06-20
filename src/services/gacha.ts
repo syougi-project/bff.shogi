@@ -2,6 +2,12 @@ import { isPublishedNow } from '@/lib/time';
 import { measure } from '@/lib/perf';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
+  assertAdFreeRollAllowed,
+  buildDailyAdGachaStatus,
+  jstDayKey,
+  type DailyAdGachaStatus,
+} from '@/lib/daily-ad-gacha';
+import {
   effectiveGachaPieceWeight,
   isGachaCurrencyChar,
   normalizeGachaBallColorIndex,
@@ -91,6 +97,7 @@ export type GachaLobbySnapshot = {
   pawnCurrency: number;
   goldCurrency: number;
   history: string[];
+  dailyAdGacha: DailyAdGachaStatus;
 };
 
 export type RollGachaResult =
@@ -326,6 +333,49 @@ async function loadActiveGachasWithPiecesUncached(): Promise<ActiveGacha[]> {
   }));
 }
 
+async function getPlayerDailyAdGachaStatus(userId: string): Promise<DailyAdGachaStatus> {
+  const dayKey = jstDayKey();
+  const { data, error } = await measure(
+    'gacha.getPlayerDailyAdGachaStatus.query',
+    () =>
+      supabaseAdmin
+        .from('player_daily_ad_gacha')
+        .select('date_key')
+        .eq('player_id', userId)
+        .eq('date_key', dayKey)
+        .limit(1)
+        .maybeSingle(),
+    { userId, dayKey },
+  );
+  if (error) throw error;
+  return buildDailyAdGachaStatus({
+    dayKey,
+    usedDayKey: data ? dayKey : null,
+    used: data != null,
+  });
+}
+
+async function reserveDailyAdGachaRoll(userId: string, dayKey: string): Promise<void> {
+  const { error } = await supabaseAdmin.from('player_daily_ad_gacha').insert({
+    player_id: userId,
+    date_key: dayKey,
+  });
+  if (error) {
+    if ((error as { code?: string }).code === '23505') {
+      throw new Error('AD_GACHA_UNAVAILABLE');
+    }
+    throw error;
+  }
+}
+
+async function releaseDailyAdGachaRoll(userId: string, dayKey: string): Promise<void> {
+  await supabaseAdmin
+    .from('player_daily_ad_gacha')
+    .delete()
+    .eq('player_id', userId)
+    .eq('date_key', dayKey);
+}
+
 async function getPlayerWallet(
   userId: string,
 ): Promise<{ pawnCurrency: number; goldCurrency: number }> {
@@ -349,9 +399,14 @@ async function getPlayerWallet(
 }
 
 export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot> {
-  const [wallet, gachas] = await measure(
+  const [wallet, gachas, dailyAdGacha] = await measure(
     'gacha.getGachaLobby.parallel',
-    () => Promise.all([getPlayerWallet(userId), loadActiveGachasWithPieces()]),
+    () =>
+      Promise.all([
+        getPlayerWallet(userId),
+        loadActiveGachasWithPieces(),
+        getPlayerDailyAdGachaStatus(userId),
+      ]),
     { userId },
   );
 
@@ -382,6 +437,7 @@ export async function getGachaLobby(userId: string): Promise<GachaLobbySnapshot>
     pawnCurrency: wallet.pawnCurrency,
     goldCurrency: wallet.goldCurrency,
     history: [],
+    dailyAdGacha,
   };
 }
 
@@ -469,60 +525,77 @@ async function grantOwnedPiece(
 export async function rollGacha(
   userId: string,
   gachaCode: string,
-  options?: { gachaBallColorIndex?: number },
+  options?: { gachaBallColorIndex?: number; adFreeRoll?: boolean },
 ): Promise<RollGachaResult> {
   const normalized = normalizeGachaCode(gachaCode.trim());
   const gacha = (await loadActiveGachasWithPieces()).find((x) => x.gachaCode === normalized);
   if (!gacha) throw new Error('Gacha not found or unavailable');
   if (gacha.pieces.length === 0) throw new Error('No pieces configured for gacha');
-  await spendGachaCost(userId, { pawn: gacha.costs.pawn, gold: gacha.costs.gold });
 
-  const colorIndex = normalizeGachaBallColorIndex(options?.gachaBallColorIndex);
-  const picked = pickWeightedRandom(gacha.pieces, (item) =>
-    effectiveGachaPieceWeight(item.char, item.weight, colorIndex),
-  );
+  const adFreeRoll = options?.adFreeRoll === true;
+  let reservedDayKey: string | null = null;
+  if (adFreeRoll) {
+    const status = await getPlayerDailyAdGachaStatus(userId);
+    assertAdFreeRollAllowed(normalized, status);
+    reservedDayKey = status.dayKey;
+    await reserveDailyAdGachaRoll(userId, reservedDayKey);
+  } else {
+    await spendGachaCost(userId, { pawn: gacha.costs.pawn, gold: gacha.costs.gold });
+  }
 
-  if (picked.char === '歩') {
-    const pawnAmount = pawnRewardForCurrencyRoll(gacha.gachaCode);
-    const wallet = await addPlayerCurrency(userId, { pawn: pawnAmount, gold: 0 });
+  try {
+    const colorIndex = normalizeGachaBallColorIndex(options?.gachaBallColorIndex);
+    const picked = pickWeightedRandom(gacha.pieces, (item) =>
+      effectiveGachaPieceWeight(item.char, item.weight, colorIndex),
+    );
+
+    if (picked.char === '歩') {
+      const pawnAmount = pawnRewardForCurrencyRoll(gacha.gachaCode);
+      const wallet = await addPlayerCurrency(userId, { pawn: pawnAmount, gold: 0 });
+      return {
+        type: 'miss',
+        currency: 'pawn',
+        amount: pawnAmount,
+        pawnCurrency: wallet.pawnCurrency,
+        goldCurrency: wallet.goldCurrency,
+      };
+    }
+
+    if (picked.char === '金') {
+      const wallet = await addPlayerCurrency(userId, { pawn: 0, gold: 1 });
+      return {
+        type: 'miss',
+        currency: 'gold',
+        amount: 1,
+        pawnCurrency: wallet.pawnCurrency,
+        goldCurrency: wallet.goldCurrency,
+      };
+    }
+
+    const [{ alreadyOwned }, wallet] = await Promise.all([
+      grantOwnedPiece(userId, picked.pieceId),
+      getPlayerWallet(userId),
+    ]);
+    activeGachaCache = null;
+    activeGachaCacheAt = 0;
+    clearPieceCatalogCache();
+
     return {
-      type: 'miss',
-      currency: 'pawn',
-      amount: pawnAmount,
+      type: 'hit',
+      piece: {
+        char: picked.char,
+        name: picked.name,
+        rarity: picked.rarity,
+        description: picked.description ?? `${picked.name}を獲得しました。`,
+      },
+      alreadyOwned,
       pawnCurrency: wallet.pawnCurrency,
       goldCurrency: wallet.goldCurrency,
     };
+  } catch (error) {
+    if (adFreeRoll && reservedDayKey) {
+      await releaseDailyAdGachaRoll(userId, reservedDayKey);
+    }
+    throw error;
   }
-
-  if (picked.char === '金') {
-    const wallet = await addPlayerCurrency(userId, { pawn: 0, gold: 1 });
-    return {
-      type: 'miss',
-      currency: 'gold',
-      amount: 1,
-      pawnCurrency: wallet.pawnCurrency,
-      goldCurrency: wallet.goldCurrency,
-    };
-  }
-
-  const [{ alreadyOwned }, wallet] = await Promise.all([
-    grantOwnedPiece(userId, picked.pieceId),
-    getPlayerWallet(userId),
-  ]);
-  activeGachaCache = null;
-  activeGachaCacheAt = 0;
-  clearPieceCatalogCache();
-
-  return {
-    type: 'hit',
-    piece: {
-      char: picked.char,
-      name: picked.name,
-      rarity: picked.rarity,
-      description: picked.description ?? `${picked.name}を獲得しました。`,
-    },
-    alreadyOwned,
-    pawnCurrency: wallet.pawnCurrency,
-    goldCurrency: wallet.goldCurrency,
-  };
 }

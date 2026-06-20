@@ -31,6 +31,7 @@ type RollBody = {
   gachaId?: unknown;
   /** 0=白, 1=青, 2=赤, 3=金, 4=黒（ホームのガチャ玉表示と同期） */
   gachaBallColorIndex?: unknown;
+  adFreeRoll?: unknown;
 };
 
 export async function postGachaRollHandler(req: Request) {
@@ -52,13 +53,21 @@ export async function postGachaRollHandler(req: Request) {
       ? Math.floor(body.gachaBallColorIndex)
       : 0;
 
+  const adFreeRoll = body.adFreeRoll === true;
+
   try {
-    const result = await rollGacha(userId, gachaId, { gachaBallColorIndex: colorIndex });
+    const result = await rollGacha(userId, gachaId, {
+      gachaBallColorIndex: colorIndex,
+      adFreeRoll,
+    });
     return jsonOk(result);
   } catch (error: any) {
     const message = String(error?.message ?? '');
     if (message === 'INSUFFICIENT_CURRENCY') {
       return jsonError('INSUFFICIENT_CURRENCY', 'Not enough currency to roll this gacha', 400);
+    }
+    if (message === 'AD_GACHA_UNAVAILABLE') {
+      return jsonError('AD_GACHA_UNAVAILABLE', '本日の広告無償ガチャは利用できません', 400);
     }
     if (message.includes('not found')) {
       return jsonError('NOT_FOUND', message, 404);
