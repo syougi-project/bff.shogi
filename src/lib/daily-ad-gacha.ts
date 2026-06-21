@@ -64,3 +64,17 @@ export function assertAdFreeRollAllowed(gachaKey: string, status: DailyAdGachaSt
     throw new Error('AD_GACHA_UNAVAILABLE');
   }
 }
+
+/** マイグレーション未適用などで player_daily_ad_gacha が無い環境向け */
+export function isMissingDailyAdGachaTableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const message = String((error as { message?: string }).message ?? '');
+  const code = String((error as { code?: string }).code ?? '');
+  if (!message.includes('player_daily_ad_gacha')) return false;
+  return (
+    message.includes('schema cache') ||
+    message.includes('does not exist') ||
+    code === 'PGRST205' ||
+    code === '42P01'
+  );
+}

@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
   assertAdFreeRollAllowed,
   buildDailyAdGachaStatus,
+  isMissingDailyAdGachaTableError,
   jstDayKey,
   type DailyAdGachaStatus,
 } from '@/lib/daily-ad-gacha';
@@ -97,7 +98,8 @@ export type GachaLobbySnapshot = {
   pawnCurrency: number;
   goldCurrency: number;
   history: string[];
-  dailyAdGacha: DailyAdGachaStatus;
+  /** 広告無償ガチャが利用不可（DB未適用等）のとき null */
+  dailyAdGacha: DailyAdGachaStatus | null;
 };
 
 export type RollGachaResult =
@@ -333,7 +335,7 @@ async function loadActiveGachasWithPiecesUncached(): Promise<ActiveGacha[]> {
   }));
 }
 
-async function getPlayerDailyAdGachaStatus(userId: string): Promise<DailyAdGachaStatus> {
+async function getPlayerDailyAdGachaStatus(userId: string): Promise<DailyAdGachaStatus | null> {
   const dayKey = jstDayKey();
   const { data, error } = await measure(
     'gacha.getPlayerDailyAdGachaStatus.query',
@@ -347,7 +349,10 @@ async function getPlayerDailyAdGachaStatus(userId: string): Promise<DailyAdGacha
         .maybeSingle(),
     { userId, dayKey },
   );
-  if (error) throw error;
+  if (error) {
+    if (isMissingDailyAdGachaTableError(error)) return null;
+    throw error;
+  }
   return buildDailyAdGachaStatus({
     dayKey,
     usedDayKey: data ? dayKey : null,
@@ -361,6 +366,9 @@ async function reserveDailyAdGachaRoll(userId: string, dayKey: string): Promise<
     date_key: dayKey,
   });
   if (error) {
+    if (isMissingDailyAdGachaTableError(error)) {
+      throw new Error('AD_GACHA_UNAVAILABLE');
+    }
     if ((error as { code?: string }).code === '23505') {
       throw new Error('AD_GACHA_UNAVAILABLE');
     }
@@ -369,11 +377,14 @@ async function reserveDailyAdGachaRoll(userId: string, dayKey: string): Promise<
 }
 
 async function releaseDailyAdGachaRoll(userId: string, dayKey: string): Promise<void> {
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from('player_daily_ad_gacha')
     .delete()
     .eq('player_id', userId)
     .eq('date_key', dayKey);
+  if (error && !isMissingDailyAdGachaTableError(error)) {
+    throw error;
+  }
 }
 
 async function getPlayerWallet(
@@ -536,6 +547,9 @@ export async function rollGacha(
   let reservedDayKey: string | null = null;
   if (adFreeRoll) {
     const status = await getPlayerDailyAdGachaStatus(userId);
+    if (!status) {
+      throw new Error('AD_GACHA_UNAVAILABLE');
+    }
     assertAdFreeRollAllowed(normalized, status);
     reservedDayKey = status.dayKey;
     await reserveDailyAdGachaRoll(userId, reservedDayKey);

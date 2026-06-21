@@ -118,6 +118,69 @@ export async function getPieceShopCatalogForGuest(): Promise<PieceShopCatalogSna
   };
 }
 
+async function spendShopCost(
+  userId: string,
+  pawnCost: number,
+  goldCost: number,
+): Promise<{ pawnCurrency: number; goldCurrency: number }> {
+  const wallet = await getPlayerWallet(userId);
+  if (wallet.pawnCurrency < pawnCost || wallet.goldCurrency < goldCost) {
+    throw new Error('INSUFFICIENT_CURRENCY');
+  }
+
+  const nextPawn = wallet.pawnCurrency - pawnCost;
+  const nextGold = wallet.goldCurrency - goldCost;
+  const { error } = await measure(
+    'shop.spendShopCost.update',
+    () =>
+      supabaseAdmin
+        .from('players')
+        .update({
+          pawn_currency: nextPawn,
+          gold_currency: nextGold,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId),
+    { userId, pawnCost, goldCost },
+  );
+  if (error) throw error;
+
+  return { pawnCurrency: nextPawn, goldCurrency: nextGold };
+}
+
+async function grantShopPiece(userId: string, pieceId: number): Promise<void> {
+  const { data, error } = await measure(
+    'shop.grantShopPiece.select',
+    () =>
+      supabaseAdmin
+        .from('player_owned_pieces')
+        .select('quantity')
+        .eq('player_id', userId)
+        .eq('piece_id', pieceId)
+        .limit(1)
+        .maybeSingle(),
+    { userId, pieceId },
+  );
+  if (error) throw error;
+  if (data) {
+    throw new Error('ALREADY_OWNED');
+  }
+
+  const { error: insertError } = await measure(
+    'shop.grantShopPiece.insert',
+    () =>
+      supabaseAdmin.from('player_owned_pieces').insert({
+        player_id: userId,
+        piece_id: pieceId,
+        source: 'shop',
+        quantity: 1,
+        acquired_at: new Date().toISOString(),
+      }),
+    { userId, pieceId },
+  );
+  if (insertError) throw insertError;
+}
+
 export async function purchasePieceShopItem(
   userId: string,
   itemKey: ShopItemKey,
@@ -128,37 +191,17 @@ export async function purchasePieceShopItem(
   const pieceId = await measure('shop.resolveShopPieceId', () => resolveShopPieceId(itemKey), {
     itemKey,
   });
-  const { data, error } = await measure(
-    'shop.purchasePieceShopItem.rpc',
-    () =>
-      supabaseAdmin.rpc('purchase_shop_piece_item', {
-        p_user_id: userId,
-        p_piece_id: pieceId,
-        p_pawn_cost: item.costType === 'pawn' ? item.cost : 0,
-        p_gold_cost: item.costType === 'gold' ? item.cost : 0,
-      }),
-    { userId, itemKey, pieceId },
-  );
-  if (error) throw error;
 
-  const row = data as {
-    pawn_currency?: unknown;
-    gold_currency?: unknown;
-    already_owned?: unknown;
-  } | null;
-  if (!row) {
-    throw new Error('Failed to purchase piece');
-  }
-
-  const alreadyOwned = Boolean(row.already_owned);
-  if (alreadyOwned) {
+  const ownedBefore = await listOwnedShopKeys(userId);
+  if (ownedBefore.includes(itemKey)) {
     throw new Error('ALREADY_OWNED');
   }
 
-  const wallet = {
-    pawnCurrency: toNumber(row.pawn_currency),
-    goldCurrency: toNumber(row.gold_currency),
-  };
+  const pawnCost = item.costType === 'pawn' ? item.cost : 0;
+  const goldCost = item.costType === 'gold' ? item.cost : 0;
+  const wallet = await spendShopCost(userId, pawnCost, goldCost);
+  await grantShopPiece(userId, pieceId);
+
   const owned = await listOwnedShopKeys(userId);
 
   return {

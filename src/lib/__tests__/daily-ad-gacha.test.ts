@@ -4,6 +4,7 @@ import {
   buildDailyAdGachaStatus,
   canRollGachaWithAd,
   featuredAdGachaCodeForDay,
+  isMissingDailyAdGachaTableError,
   jstDayKey,
 } from '../daily-ad-gacha';
 
@@ -28,5 +29,15 @@ describe('daily-ad-gacha', () => {
     expect(canRollGachaWithAd(status.featuredGachaKey, status)).toBe(true);
     expect(canRollGachaWithAd('kanken1', status)).toBe(false);
     expect(canRollGachaWithAd(status.featuredGachaKey, { ...status, used: true })).toBe(false);
+  });
+
+  it('player_daily_ad_gacha 未作成エラーを検出する', () => {
+    expect(
+      isMissingDailyAdGachaTableError({
+        code: 'PGRST205',
+        message: "Could not find the table 'public.player_daily_ad_gacha' in the schema cache",
+      }),
+    ).toBe(true);
+    expect(isMissingDailyAdGachaTableError({ message: 'other error' })).toBe(false);
   });
 });
