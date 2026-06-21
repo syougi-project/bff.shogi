@@ -1005,6 +1005,7 @@ function formatMoveText(move: AiMove): string {
 }
 
 function isSkillTriggeredMove(move: AiMove): boolean {
+  if (move.dropPieceCode) return false;
   const notation = move.notation;
   if (!notation) return false;
   if (notation === 'time_normal') return false;
