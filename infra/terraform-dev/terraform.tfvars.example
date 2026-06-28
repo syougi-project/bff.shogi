@@ -8,8 +8,8 @@ log_retention_in_days  = 14
 readiness_check_path   = "/api/health"
 
 # Use a separate dev Supabase project. Do not put production credentials here.
-supabase_url              = "https://your-dev-project.supabase.co"
-supabase_service_role_key = "replace-me"
+dev_supabase_url              = "https://your-dev-project.supabase.co"
+dev_supabase_service_role_key = "replace-me"
 
 # ai_engine_base_url           = "https://your-dev-ai-engine.example.com"
 # matching_bff_internal_token = "replace-with-dev-internal-token"

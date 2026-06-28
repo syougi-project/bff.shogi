@@ -57,13 +57,13 @@ variable "readiness_check_path" {
   default     = "/api/health"
 }
 
-variable "supabase_url" {
+variable "dev_supabase_url" {
   description = "Dev Supabase project URL for the backend."
   type        = string
   sensitive   = true
 }
 
-variable "supabase_service_role_key" {
+variable "dev_supabase_service_role_key" {
   description = "Dev Supabase service role key used by the backend."
   type        = string
   sensitive   = true

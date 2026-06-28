@@ -73,8 +73,8 @@ resource "aws_lambda_function" "api" {
         PORT                         = tostring(var.app_port)
         AWS_LWA_PORT                 = tostring(var.app_port)
         AWS_LWA_READINESS_CHECK_PATH = var.readiness_check_path
-        SUPABASE_URL                 = var.supabase_url
-        SUPABASE_SERVICE_ROLE_KEY    = var.supabase_service_role_key
+        SUPABASE_URL                 = var.dev_supabase_url
+        SUPABASE_SERVICE_ROLE_KEY    = var.dev_supabase_service_role_key
       },
       var.ai_engine_base_url == null ? {} : { AI_ENGINE_BASE_URL = var.ai_engine_base_url },
       var.matching_bff_internal_token == null ? {} : { MATCHING_BFF_INTERNAL_TOKEN = var.matching_bff_internal_token },
