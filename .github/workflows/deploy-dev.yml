@@ -69,8 +69,8 @@ jobs:
         working-directory: infra/terraform-dev
         env:
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
-          TF_VAR_dev_supabase_url: ${{ secrets.DEV_SUPABASE_URL }}
-          TF_VAR_dev_supabase_service_role_key: ${{ secrets.DEV_SUPABASE_SERVICE_ROLE_KEY }}
+          TF_VAR_dev_supabase_url: ${{ secrets.TF_VAR_DEV_SUPABASE_URL }}
+          TF_VAR_dev_supabase_service_role_key: ${{ secrets.TF_VAR_DEV_SUPABASE_SERVICE_ROLE_KEY }}
           TF_VAR_ai_engine_base_url: ${{ secrets.TF_VAR_ai_engine_base_url }}
           TF_VAR_matching_bff_internal_token: ${{ secrets.TF_VAR_matching_bff_internal_token }}
           TF_VAR_matching_ticket_secret: ${{ secrets.TF_VAR_matching_ticket_secret }}
@@ -115,8 +115,8 @@ jobs:
         working-directory: infra/terraform-dev
         env:
           TF_VAR_aws_region: ${{ env.AWS_REGION }}
-          TF_VAR_dev_supabase_url: ${{ secrets.DEV_SUPABASE_URL }}
-          TF_VAR_dev_supabase_service_role_key: ${{ secrets.DEV_SUPABASE_SERVICE_ROLE_KEY }}
+          TF_VAR_dev_supabase_url: ${{ secrets.TF_VAR_DEV_SUPABASE_URL }}
+          TF_VAR_dev_supabase_service_role_key: ${{ secrets.TF_VAR_DEV_SUPABASE_SERVICE_ROLE_KEY }}
           TF_VAR_ai_engine_base_url: ${{ secrets.TF_VAR_ai_engine_base_url }}
           TF_VAR_matching_bff_internal_token: ${{ secrets.TF_VAR_matching_bff_internal_token }}
           TF_VAR_matching_ticket_secret: ${{ secrets.TF_VAR_matching_ticket_secret }}

@@ -32,8 +32,8 @@ The API URL is printed as the `http_api_url` output after apply.
 
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
-- `DEV_SUPABASE_URL`
-- `DEV_SUPABASE_SERVICE_ROLE_KEY`
+- `TF_VAR_DEV_SUPABASE_URL`
+- `TF_VAR_DEV_SUPABASE_SERVICE_ROLE_KEY`
 
 Optional secrets:
 
