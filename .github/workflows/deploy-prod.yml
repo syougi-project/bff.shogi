@@ -1,10 +1,10 @@
-name: Deploy Sandbox
+name: Deploy Prod
 
 on:
   workflow_dispatch:
   pull_request:
     paths:
-      - ".github/workflows/deploy-sandbox.yml"
+      - ".github/workflows/deploy-prod.yml"
       - "app/**"
       - "src/**"
       - "lib/**"
@@ -17,7 +17,7 @@ on:
     branches:
       - main
     paths:
-      - ".github/workflows/deploy-sandbox.yml"
+      - ".github/workflows/deploy-prod.yml"
       - "app/**"
       - "src/**"
       - "lib/**"
@@ -28,7 +28,7 @@ on:
       - "next.config.ts"
 
 concurrency:
-  group: deploy-sandbox-${{ github.ref }}
+  group: deploy-prod-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:

@@ -55,7 +55,7 @@ versioning, public-access block, and S3 lockfile enabled.
 
 ## GitHub Actions CD
 
-The repository includes `.github/workflows/deploy-sandbox.yml`.
+The repository includes `.github/workflows/deploy-prod.yml`.
 
 It does the following:
 

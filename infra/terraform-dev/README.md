@@ -28,7 +28,7 @@ The API URL is printed as the `http_api_url` output after apply.
 ## GitHub Actions
 
 `.github/workflows/deploy-dev.yml` runs separate plan and apply jobs on pushes to
-`dev`. It uses the same repository variables and secrets as the sandbox workflow:
+`dev`. It uses the same repository variables and secrets as the production workflow:
 
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
