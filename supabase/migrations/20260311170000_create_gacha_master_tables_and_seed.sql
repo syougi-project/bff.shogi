@@ -92,7 +92,7 @@ values
     'assets/gacha/hihen.png',
     1,
     true,
-    now(),
+    '2026-03-11 00:00:00+09',
     '2026-04-01 23:59:59+09'
   ),
   (
@@ -109,7 +109,7 @@ values
     'assets/gacha/ukanmuri.png',
     1,
     true,
-    now(),
+    '2026-03-11 00:00:00+09',
     '2026-04-01 23:59:59+09'
   ),
   (
@@ -126,7 +126,7 @@ values
     'assets/gacha/shinnyo.png',
     1,
     true,
-    now(),
+    '2026-03-11 00:00:00+09',
     '2026-04-01 23:59:59+09'
   ),
   (
@@ -143,7 +143,7 @@ values
     'assets/gacha/kanken1.png',
     1,
     true,
-    now(),
+    '2026-03-11 00:00:00+09',
     '2026-04-01 23:59:59+09'
   )
 on conflict (gacha_code) do update

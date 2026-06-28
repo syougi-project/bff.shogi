@@ -119,7 +119,7 @@ set
   implementation_kind = coalesce(nullif(trim(s.implementation_kind), ''), 'primitive'),
   trigger_group = coalesce(nullif(trim(s.trigger_group), ''), 'event_capture'),
   trigger_type = coalesce(nullif(trim(s.trigger_type), ''), 'after_capture'),
-  parse_status = coalesce(nullif(trim(s.parse_status), ''), 'rule_only_v2'),
+  parse_status = coalesce(s.parse_status, 'rule_only_v2'::master.skill_parse_status_enum),
   updated_at = now()
 where s.skill_code = 'skill_dc1e194f434b'
   and (
@@ -136,7 +136,7 @@ set
   implementation_kind = coalesce(nullif(trim(s.implementation_kind), ''), 'primitive'),
   trigger_group = coalesce(nullif(trim(s.trigger_group), ''), 'continuous'),
   trigger_type = coalesce(nullif(trim(s.trigger_type), ''), 'continuous_rule'),
-  parse_status = coalesce(nullif(trim(s.parse_status), ''), 'rule_only_v2'),
+  parse_status = coalesce(s.parse_status, 'rule_only_v2'::master.skill_parse_status_enum),
   updated_at = now()
 where s.skill_code = 'skill_a517ef7b8361'
   and (
