@@ -29,7 +29,7 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 .lambda-build/
-infra/terraform/terraform.tfvars
+infra/terraform*/terraform.tfvars
 
 # Supabase local
 .supabase/

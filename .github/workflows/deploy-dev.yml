@@ -1,0 +1,123 @@
+name: Deploy Dev
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+    paths:
+      - ".github/workflows/deploy-dev.yml"
+      - "app/**"
+      - "src/**"
+      - "lib/**"
+      - "scripts/build-lambda-zip.sh"
+      - "infra/terraform-dev/**"
+      - "package.json"
+      - "bun.lock"
+      - "next.config.ts"
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-northeast-1' }}
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Lambda zip
+        run: bun run build:lambda
+
+      - name: Terraform Init
+        working-directory: infra/terraform-dev
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: infra/terraform-dev
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: infra/terraform-dev
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_supabase_url: ${{ secrets.TF_VAR_supabase_url }}
+          TF_VAR_supabase_service_role_key: ${{ secrets.TF_VAR_supabase_service_role_key }}
+          TF_VAR_ai_engine_base_url: ${{ secrets.TF_VAR_ai_engine_base_url }}
+          TF_VAR_matching_bff_internal_token: ${{ secrets.TF_VAR_matching_bff_internal_token }}
+          TF_VAR_matching_ticket_secret: ${{ secrets.TF_VAR_matching_ticket_secret }}
+        run: terraform plan -no-color
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build Lambda zip
+        run: bun run build:lambda
+
+      - name: Terraform Init
+        working-directory: infra/terraform-dev
+        run: terraform init
+
+      - name: Terraform Apply
+        working-directory: infra/terraform-dev
+        env:
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
+          TF_VAR_supabase_url: ${{ secrets.TF_VAR_supabase_url }}
+          TF_VAR_supabase_service_role_key: ${{ secrets.TF_VAR_supabase_service_role_key }}
+          TF_VAR_ai_engine_base_url: ${{ secrets.TF_VAR_ai_engine_base_url }}
+          TF_VAR_matching_bff_internal_token: ${{ secrets.TF_VAR_matching_bff_internal_token }}
+          TF_VAR_matching_ticket_secret: ${{ secrets.TF_VAR_matching_ticket_secret }}
+        run: terraform apply -auto-approve
