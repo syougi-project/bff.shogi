@@ -15,6 +15,12 @@ import {
 } from '@/lib/gacha-ball-piece-rate';
 import { clearPieceCatalogCache } from '@/services/piece-master';
 
+/** 漢検1級ガチャ「膠」は SSR（古い seed で UR になっている行を補正） */
+export function normalizeGachaPieceRarity(char: string, rarity: string): string {
+  if (char === '膠') return 'SSR';
+  return rarity;
+}
+
 type GachaRow = {
   gacha_id: number;
   gacha_code: string;
@@ -324,7 +330,7 @@ async function loadActiveGachasWithPiecesUncached(): Promise<ActiveGacha[]> {
         pieceId: r.piece!.piece_id,
         char: r.piece!.kanji,
         name: r.piece!.name,
-        rarity: r.piece!.rarity ?? 'N',
+        rarity: normalizeGachaPieceRarity(r.piece!.kanji, r.piece!.rarity ?? 'N'),
         weight: toNumber(r.row.weight, 1),
         imageBucket: r.piece!.image_bucket,
         imageKey: r.piece!.image_key,
@@ -599,7 +605,7 @@ export async function rollGacha(
       piece: {
         char: picked.char,
         name: picked.name,
-        rarity: picked.rarity,
+        rarity: normalizeGachaPieceRarity(picked.char, picked.rarity),
         description: picked.description ?? `${picked.name}を獲得しました。`,
       },
       alreadyOwned,
