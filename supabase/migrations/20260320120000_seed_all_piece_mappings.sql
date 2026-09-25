@@ -7,6 +7,10 @@ begin;
 alter table master.m_piece_mapping
   drop constraint if exists m_piece_mapping_sfen_promoted_uq;
 
+-- The original inline column check was auto-named with the `_check` suffix.
+alter table master.m_piece_mapping
+  drop constraint if exists m_piece_mapping_sfen_code_check;
+
 alter table master.m_piece_mapping
   drop constraint if exists m_piece_mapping_sfen_code_chk;
 
